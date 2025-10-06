@@ -121,23 +121,36 @@ app.get('/api/me', async (req, res) => {
   }
 });
 
-// ---------- API: Top Games ----------
-app.get('/api/topgames', cache('30 seconds'), async (req,res)=>{
-  const limit = Math.min(Number(req.query.limit)||50,100);
-  const page = Math.max(Number(req.query.page)||1,1);
-  const offset = (page-1)*limit;
+// ---------- API: Games ----------
+// /api/games?query=&limit=50&page=1&sort=1
+// sort: 1=popular, 2=recent, 3=upcoming, etc.
+app.get('/api/games', cache('30 seconds'), async (req,res)=>{
+  const limit = Math.min(Number(req.query.limit)||50, 100);
+  const page = Math.max(Number(req.query.page)||1, 1);
+  const query = encodeURIComponent(req.query.query || '');
+  const sort = Number(req.query.sort) || 1;
+
   try {
-    const json = await fetchJson(`https://games.roblox.com/v1/games/list?sortOrder=Desc&limit=${limit}&cursor=${offset}`);
-    const games = (json.data||json.games||[]).map(g=>({
-      id: g.id||g.universeId||g.rootPlaceId||g.id,
-      name: g.name,
-      creator: g.creator?.name || 'Unknown',
-      thumbnail: g.thumbnailUrl||null,
-      playing: typeof g.playing==='number'?g.playing:g.playingCount||null
+    // Roblox Search API for experiences (games)
+    const searchUrl = `https://search.roblox.com/catalog/json?Keyword=${query}&Category=9&SortType=${sort}&Limit=${limit}&Page=${page}`;
+    const searchJson = await fetchJson(searchUrl);
+
+    const games = (searchJson || []).map(g => ({
+      id: g.PlaceId || g.AssetId,
+      name: g.Name || g.Title || g.NameText,
+      creator: g.Creator?.Name || g.CreatorName || 'Unknown',
+      thumbnail: g.Thumbnail?.Url || null,
+      playing: g.Playing || null
     }));
-    res.json({ page, limit, data: games });
-  } catch(err){ console.error(err); res.json({ page, limit, data: [] }); }
+
+    res.json({ page, limit, query: req.query.query || '', sort, data: games });
+  } catch(err){
+    console.error('games fetch error', err);
+    res.status(500).json({ page, limit, query, sort, data: [], error: err.message });
+  }
 });
+
+
 
 // ---------- Serve frontend SPA ----------
 app.get(['/', '/home', '/signin', '/games', '/users/:id', '/settings', '/terms', '/privacy'], (req,res)=>{
