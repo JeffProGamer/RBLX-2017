@@ -16,8 +16,8 @@ const PORT = process.env.PORT || 3000;
 
 // === CONFIG (set these env vars in Render) ===
 // ROBLOX_CLIENT_ID, ROBLOX_CLIENT_SECRET, BASE_URL (e.g. https://rblx-2017.onrender.com)
-const ROBLOX_CLIENT_ID = process.env.ROBLOX_CLIENT_ID || '';
-const ROBLOX_CLIENT_SECRET = process.env.ROBLOX_CLIENT_SECRET || '';
+const ROBLOX_CLIENT_ID = process.env.ROBLOX_CLIENT_ID || '6438392192740765716';
+const ROBLOX_CLIENT_SECRET = process.env.ROBLOX_CLIENT_SECRET || 'RBX-xXCEXLXi-E6pOKm8E_OZJ9IV20B2nCA-n7ExOQ7VnB7jHoEuYePvuIQdDpTztCe-';
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
 // === SECURITY & BASE MIDDLEWARE ===
@@ -25,7 +25,7 @@ app.use(cors()); // allow all origins for now; lock down in production
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'ac0d696e0f977ccc8677bdd66d537fb1d3525eabf898ec43e17994c61db8c12b8895d10a389a6a502ff13468274c3583420080ca293150b0e6294ccebf22e9dd',
+  secret: process.env.c,
   resave: false,
   saveUninitialized: true,
   cookie: { secure: false } // set to true with HTTPS in production
