@@ -47,21 +47,21 @@ const AUTH_TOKEN = 'https://authorize.roblox.com/oauth/token';
 app.get('/auth', (req,res)=>{
   const state = Math.random().toString(36).slice(2);
   req.session.oauth_state = state;
-  const redirect_uri = `${BASE_URL}/auth/roblox/callback`;
+  const redirect_uri = `${BASE_URL}/auth/callback`;
   const scope = encodeURIComponent('openid profile');
   const url = `${AUTH_AUTHORIZE}?client_id=${ROBLOX_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(redirect_uri)}&state=${state}&scope=${scope}`;
   res.redirect(url);
 });
 
 // OAuth callback
-app.get('/auth/roblox/callback', async (req,res)=>{
+app.get('/auth/callback', async (req,res)=>{
   const { code, state } = req.query;
   if (!code || state !== req.session.oauth_state) return res.status(400).send('Invalid OAuth state or code');
 
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     code,
-    redirect_uri: `${BASE_URL}/auth/roblox/callback`,
+    redirect_uri: `${BASE_URL}/auth/callback`,
     client_id: ROBLOX_CLIENT_ID,
     client_secret: ROBLOX_CLIENT_SECRET
   });
@@ -114,7 +114,7 @@ app.get('/api/games', cache('30 seconds'), async (req,res)=>{
   const sort = Number(req.query.sort)||1;
 
   try {
-    const searchUrl = `https://search.roblox.com/catalog/json?Keyword=${query}&Category=9&SortType=${sort}&Limit=${limit}&Page=${page}`;
+    const searchUrl = `https://roblox.com/discover/?Keyword=${query}&Category=9&SortType=${sort}&Limit=${limit}&Page=${page}`;
     const searchJson = await fetchJson(searchUrl);
     const games = (searchJson||[]).map(g=>({
       id: g.PlaceId||g.AssetId,
