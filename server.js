@@ -1,25 +1,26 @@
 // server.js
-// RLBX 2017: Server-side app for Render
+// Full RLBX 2017 server + frontend
 // Node 18+ recommended
 
 const express = require('express');
 const fetch = require('node-fetch'); // v2
 const path = require('path');
-const cors = require('cors');
 const session = require('express-session');
 const rateLimit = require('express-rate-limit');
 const apicache = require('apicache');
+const cors = require('cors');
+const fs = require('fs');
 
 const app = express();
 const cache = apicache.middleware;
 const PORT = process.env.PORT || 3000;
 
-// === CONFIG (set these env vars in Render) ===
+// === CONFIG ===
 const ROBLOX_CLIENT_ID = process.env.ROBLOX_CLIENT_ID || '6438392192740765716';
 const ROBLOX_CLIENT_SECRET = process.env.ROBLOX_CLIENT_SECRET || 'RBX-xXCEXLXi-E6pOKm8E_OZJ_TPWxIFRUIkcWjQeOICeG8AEPIbhJzJWZqIrU3p320K';
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
-// === SECURITY & BASE MIDDLEWARE ===
+// === MIDDLEWARE ===
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -27,15 +28,14 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'ac0d696e0f977ccc8677bdd66d537fb1d3525eabf898ec43e17994c61db8c12b8895d10a389a6a502ff13468274c3583420080ca293150b0e6294ccebf22e9dd',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: false } // true with HTTPS in production
+  cookie: { secure: false } // true for HTTPS
 }));
+app.use('/api/', rateLimit({ windowMs: 15*1000, max: 40 }));
 
-app.use('/api/', rateLimit({ windowMs: 15 * 1000, max: 40 }));
-
-// Serve static files
+// Serve static frontend files
 app.use(express.static(path.join(__dirname)));
 
-// ---------- Helper fetch with timeout ----------
+// Helper fetch with timeout
 async function fetchJson(url, opts = {}) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), 10000);
@@ -50,7 +50,7 @@ async function fetchJson(url, opts = {}) {
   }
 }
 
-// ---------- ROBLOX OAUTH 2.0 ----------
+// ---------- ROBLOX OAuth ----------
 const AUTH_AUTHORIZE = 'https://apis.roblox.com/oauth/authorize';
 const AUTH_TOKEN = 'https://apis.roblox.com/oauth/token';
 
@@ -91,20 +91,60 @@ app.get('/auth/roblox/callback', async (req, res) => {
   }
 });
 
+// Logout
 app.get('/auth/logout', (req, res) => {
   delete req.session.roblox_token;
   res.redirect('/');
 });
 
-// ---------- API endpoints ----------
-// Example: /api/topgames, /api/search, /api/game/:id, /api/users/:id
-// (Same as your original logic, cleaned to avoid minor errors)
+// ---------- API: Get logged-in user ----------
+app.get('/api/me', async (req, res) => {
+  if (!req.session.roblox_token) return res.status(401).json({ error: 'Not signed in' });
 
-app.get('/api/health', (req, res) => res.json({ ok: true }));
+  try {
+    // Get authenticated user
+    const userResp = await fetch('https://apis.roblox.com/users/v1/users/authenticated', {
+      headers: { 'Authorization': `Bearer ${req.session.roblox_token}` }
+    });
+    if (!userResp.ok) throw new Error('Failed to fetch user info');
+    const user = await userResp.json();
 
-// Fallback for SPA routes
-app.get(['/', '/home', '/signin', '/games', '/users/:id'], (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+    // Get headshot
+    const headshotResp = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${user.id}&size=48x48&format=Png&isCircular=true`);
+    const headshotData = await headshotResp.json();
+    const headshotUrl = headshotData.data?.[0]?.imageUrl || '';
+
+    res.json({ id: user.id, name: user.displayName || user.name, headshot: headshotUrl });
+  } catch(err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.listen(PORT, () => console.log(`RLBX server running on port ${PORT}`));
+// ---------- API: Top Games ----------
+app.get('/api/topgames', cache('30 seconds'), async (req,res)=>{
+  const limit = Math.min(Number(req.query.limit)||50,100);
+  const page = Math.max(Number(req.query.page)||1,1);
+  const offset = (page-1)*limit;
+  try {
+    const json = await fetchJson(`https://games.roblox.com/v1/games/list?sortOrder=Desc&limit=${limit}&cursor=${offset}`);
+    const games = (json.data||json.games||[]).map(g=>({
+      id: g.id||g.universeId||g.rootPlaceId||g.id,
+      name: g.name,
+      creator: g.creator?.name || 'Unknown',
+      thumbnail: g.thumbnailUrl||null,
+      playing: typeof g.playing==='number'?g.playing:g.playingCount||null
+    }));
+    res.json({ page, limit, data: games });
+  } catch(err){ console.error(err); res.json({ page, limit, data: [] }); }
+});
+
+// ---------- Serve frontend SPA ----------
+app.get(['/', '/home', '/signin', '/games', '/users/:id', '/settings', '/terms', '/privacy'], (req,res)=>{
+  res.sendFile(path.join(__dirname,'index.html'));
+});
+
+// Health check
+app.get('/api/health', (req,res)=>res.json({ok:true}));
+
+app.listen(PORT,()=>console.log(`RLBX server running on port ${PORT}`));
