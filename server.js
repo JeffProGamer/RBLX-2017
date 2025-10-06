@@ -8,7 +8,7 @@ const session = require('express-session');
 const rateLimit = require('express-rate-limit');
 const apicache = require('apicache');
 const cors = require('cors');
-const jwt = require('jsonwebtoken');
+
 
 let fetchLib;
 try {
