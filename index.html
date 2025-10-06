@@ -22,12 +22,14 @@ nav button { margin-left:10px; padding:6px 12px; cursor:pointer; }
 .ghost{flex:1;padding:10px;border-radius:6px;border:1px solid #ccc;background:transparent;cursor:pointer;}
 .muted{color:#666;font-size:12px;}
 .fullscreen-bg {position:fixed;top:0;left:0;width:100vw;height:100vh;background-size:cover;background-position:center;z-index:-1;}
+.search-bar { display:flex; gap:8px; margin-bottom:10px; }
+.search-bar input { flex:1; padding:8px; border-radius:6px; border:1px solid #ccc; }
 </style>
 </head>
 <body>
 <header>
   <img src="logo.png" id="logo" alt="RLBX Logo"/>
-  <strong>RLBX 2017 Edition</strong>
+  <strong>ROBLOX 2017 Edition</strong>
   <div id="userInfo"></div>
   <nav>
     <button id="homeBtn">Home</button>
@@ -42,11 +44,11 @@ nav button { margin-left:10px; padding:6px 12px; cursor:pointer; }
 <main class="container" id="app"></main>
 
 <script>
-const PROXY = "https://rblx-2017.onrender.com"; // your server API
+const PROXY = "https://rblx-2017.onrender.com"; 
 const app = document.getElementById("app");
 const userInfo = document.getElementById("userInfo");
 
-// ----------------- Navigation -----------------
+// Navigation
 document.getElementById("homeBtn").onclick = ()=>navigate("home");
 document.getElementById("gamesBtn").onclick = ()=>navigate("games");
 document.getElementById("signinBtn").onclick = ()=>navigate("signin");
@@ -57,31 +59,29 @@ document.getElementById("logo").onclick = ()=>navigate("home");
 
 function navigate(page){ renderPage(page); }
 
-// ----------------- Load logged-in user -----------------
+// Load logged-in user
 async function loadUser() {
   try {
     const res = await fetch(`${PROXY}/api/me`, { credentials: 'include' });
-    if (!res.ok) return; // not signed in
+    if (!res.ok) return;
     const user = await res.json();
     userInfo.innerHTML = `
       <img src="${user.headshot}" alt="${user.name}">
       <span>${user.name}</span>
       <button id="logoutBtn" style="margin-left:8px;padding:4px 8px;border:none;border-radius:6px;background:#f44336;color:white;cursor:pointer;">Logout</button>
     `;
-    document.getElementById("signinBtn").style.display = "none"; // hide sign in button
+    document.getElementById("signinBtn").style.display = "none";
     document.getElementById("logoutBtn").onclick = async () => {
       await fetch(`${PROXY}/auth/logout`, { credentials: 'include' });
       userInfo.innerHTML = "";
       document.getElementById("signinBtn").style.display = "inline-block";
       navigate("home");
     };
-  } catch(e) {
-    console.log("User not signed in");
-  }
+  } catch(e){ console.log("User not signed in"); }
 }
 
-// ----------------- Render pages -----------------
-function renderPage(page){
+// Render pages
+async function renderPage(page){
   app.innerHTML = "";
   if(page==="home"){
     const el = document.createElement("div");
@@ -107,23 +107,44 @@ function renderPage(page){
   } else if(page==="games"){
     const el = document.createElement("div");
     el.className="card";
-    el.innerHTML = "<h2>Games</h2><div class='games-grid' id='gamesGrid'></div>";
+    el.innerHTML = `
+      <h2>Games</h2>
+      <div class="search-bar">
+        <input type="text" id="gameSearch" placeholder="Search games...">
+        <button class="btn" id="searchBtn">Search</button>
+      </div>
+      <div class='games-grid' id='gamesGrid'></div>
+    `;
     app.appendChild(el);
-    fetch(`${PROXY}/api/topgames?limit=50&page=1`, { credentials: 'include' }).then(r=>r.json()).then(data=>{
-      const grid = document.getElementById("gamesGrid");
-      data.data.forEach(g=>{
-        const div = document.createElement("div");
-        div.className="game";
-        div.innerHTML = `
-          <img src="${g.thumbnail||''}" alt="${g.name}">
-          <strong>${g.name}</strong>
-          <div>${g.creator}</div>
-          <a href="https://www.roblox.com/games/${g.id}" target="_blank" class="btn">Play</a>
-        `;
-        grid.appendChild(div);
-      });
-    }).catch(e=>console.error(e));
 
+    async function loadGames(query='') {
+      const grid = document.getElementById("gamesGrid");
+      grid.innerHTML = "Loading...";
+      try {
+        const res = await fetch(`${PROXY}/api/games?query=${encodeURIComponent(query)}&limit=50&page=1`, { credentials:'include' });
+        const data = await res.json();
+        grid.innerHTML = '';
+        if(!data.data.length) grid.innerHTML = '<p>No games found.</p>';
+        data.data.forEach(g=>{
+          const div = document.createElement("div");
+          div.className="game";
+          div.innerHTML = `
+            <img src="${g.thumbnail||''}" alt="${g.name}">
+            <strong>${g.name}</strong>
+            <div>${g.creator}</div>
+            <a href="https://www.roblox.com/games/${g.id}" target="_blank" class="btn">Play</a>
+          `;
+          grid.appendChild(div);
+        });
+      } catch(e){ grid.innerHTML='<p>Error loading games.</p>'; console.error(e); }
+    }
+
+    loadGames();
+
+    document.getElementById("searchBtn").onclick = ()=> {
+      const q = document.getElementById("gameSearch").value.trim();
+      loadGames(q);
+    };
   } else if(page==="settings"){
     const el = document.createElement("div");
     el.className="card";
@@ -138,13 +159,11 @@ function renderPage(page){
     document.getElementById("darkModeToggle").onchange = function(){
       document.body.style.background = this.checked ? "#111" : "#f0f4f8";
     }
-
   } else if(page==="terms"){
     const el = document.createElement("div");
     el.className="card";
     el.innerHTML = `<h2>Terms of Service</h2><p>Insert your terms here...</p>`;
     app.appendChild(el);
-
   } else if(page==="privacy"){
     const el = document.createElement("div");
     el.className="card";
@@ -153,7 +172,7 @@ function renderPage(page){
   }
 }
 
-// ----------------- Initial load -----------------
+// Initial load
 navigate("home");
 loadUser();
 </script>
