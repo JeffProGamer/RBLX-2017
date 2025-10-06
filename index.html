@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>RLBX 2017 Edition</title>
+<title>ROBLOX 2017 Edition</title>
 <style>
 body { margin:0; font-family:Arial, sans-serif; background:#f0f4f8; color:#111; }
 header { display:flex; align-items:center; background:#fff; padding:10px 20px; box-shadow:0 2px 6px rgba(0,0,0,0.1);}
@@ -19,6 +19,7 @@ nav button { margin-left:10px; padding:6px 12px; cursor:pointer; }
 .btn{flex:1;padding:10px;border-radius:6px;border:none;background:#1f8ef1;color:white;cursor:pointer;}
 .ghost{flex:1;padding:10px;border-radius:6px;border:1px solid #ccc;background:transparent;cursor:pointer;}
 .muted{color:#666;font-size:12px;}
+.fullscreen-bg {position:fixed;top:0;left:0;width:100vw;height:100vh;background-size:cover;background-position:center;z-index:-1;}
 </style>
 </head>
 <body>
@@ -29,18 +30,24 @@ nav button { margin-left:10px; padding:6px 12px; cursor:pointer; }
     <button id="homeBtn">Home</button>
     <button id="gamesBtn">Games</button>
     <button id="signinBtn">Sign In</button>
+    <button id="settingsBtn">Settings</button>
+    <button id="termsBtn">Terms</button>
+    <button id="privacyBtn">Privacy</button>
   </nav>
 </header>
 
 <main class="container" id="app"></main>
 
 <script>
-const PROXY = "https://rblx-2017.onrender.com"; // Replace with your Render Web Service URL
+const PROXY = "https://rblx-2017.onrender.com"; // Your server API
 const app = document.getElementById("app");
 
 document.getElementById("homeBtn").onclick = ()=>navigate("home");
 document.getElementById("gamesBtn").onclick = ()=>navigate("games");
 document.getElementById("signinBtn").onclick = ()=>navigate("signin");
+document.getElementById("settingsBtn").onclick = ()=>navigate("settings");
+document.getElementById("termsBtn").onclick = ()=>navigate("terms");
+document.getElementById("privacyBtn").onclick = ()=>navigate("privacy");
 document.getElementById("logo").onclick = ()=>navigate("home");
 
 function navigate(page){ renderPage(page); }
@@ -52,75 +59,72 @@ function renderPage(page){
     el.className="card";
     el.innerHTML = "<h2>Welcome to RLBX 2017 Edition</h2><p>Click Games to browse Roblox games.</p>";
     app.appendChild(el);
+
   } else if(page==="signin"){
     const el = document.createElement('div');
     el.innerHTML = `
-      <div style="
-        position:fixed;
-        top:0; left:0;
-        width:100vw; height:100vh;
-        background:url('signin.png') center center / cover no-repeat;
-        z-index:-1;
-      "></div>
-
-      <div style="
-        position:relative;
-        max-width:400px;
-        margin:0 auto;
-        top:15vh;
-        background:rgba(255,255,255,0.95);
-        padding:20px;
-        border-radius:10px;
-        box-shadow:0 6px 18px rgba(0,0,0,0.1);
-      ">
+      <div class="fullscreen-bg" style="background-image:url('signin.png')"></div>
+      <div style="position:relative; max-width:400px; margin:15vh auto; background:rgba(255,255,255,0.95); padding:20px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.1);">
         <h1>Sign In</h1>
-        <form id="demoSign" class="signin" onsubmit="return false;">
+        <form class="signin" onsubmit="return false;">
           <input class="input" placeholder="Username or email" name="user" autocomplete="username">
           <input class="input" placeholder="Password" type="password" name="pass" autocomplete="current-password">
           <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
-            <button class="btn" id="submitSign">Sign in</button>
-            <button class="ghost" id="cancelSign">Cancel</button>
+            <button class="btn" onclick="window.location.href=PROXY+'/auth/roblox'">Sign in with Roblox</button>
+            <button class="ghost" onclick="navigate('home')">Cancel</button>
           </div>
-          <div class="muted" style="margin-top:8px">This form is client-side only and does nothing with your data.</div>
+          <div class="muted" style="margin-top:8px">OAuth handled via server.</div>
         </form>
       </div>
     `;
-    setTimeout(()=>{
-      el.querySelector('#submitSign').addEventListener('click',()=>{
-        alert('Demo sign-in — does not send credentials.');
-        navigate('home');
-      });
-      el.querySelector('#cancelSign').addEventListener('click',()=>navigate('home'));
-    },0);
     app.appendChild(el);
+
   } else if(page==="games"){
     const el = document.createElement("div");
     el.className="card";
     el.innerHTML = "<h2>Games</h2><div class='games-grid' id='gamesGrid'></div>";
     app.appendChild(el);
-
-    const ids = [1818, 142823291, 7077]; // Example game universe IDs
-    const grid = document.getElementById("gamesGrid");
-
-    ids.forEach(async id=>{
-      try{
-        const res = await fetch(`${PROXY}/api/games/${id}`);
-        const data = await res.json();
-        const g = data.details.data[0];
-        const thumb = data.thumbnails.data[0]?.imageUrl || "";
+    fetch(`${PROXY}/api/topgames?limit=50&page=1`).then(r=>r.json()).then(data=>{
+      const grid = document.getElementById("gamesGrid");
+      data.data.forEach(g=>{
         const div = document.createElement("div");
         div.className="game";
         div.innerHTML = `
-          <img src="${thumb}" alt="${g.name}">
+          <img src="${g.thumbnail||''}" alt="${g.name}">
           <strong>${g.name}</strong>
-          <div>${g.creator?.name||"Unknown"}</div>
-          <a href="https://www.roblox.com/games/${g.rootPlaceId||g.id}" target="_blank">Play</a>
+          <div>${g.creator}</div>
+          <a href="https://www.roblox.com/games/${g.id}" target="_blank" class="btn">Play</a>
         `;
         grid.appendChild(div);
-      }catch(e){
-        console.error(e);
-      }
-    });
+      });
+    }).catch(e=>console.error(e));
+
+  } else if(page==="settings"){
+    const el = document.createElement("div");
+    el.className="card";
+    el.innerHTML = `
+      <h2>Settings</h2>
+      <form onsubmit="return false;">
+        <label>Dark Mode: <input type="checkbox" id="darkModeToggle"></label><br><br>
+        <button class="btn" onclick="alert('Settings saved (demo)')">Save</button>
+      </form>
+    `;
+    app.appendChild(el);
+    document.getElementById("darkModeToggle").onchange = function(){
+      document.body.style.background = this.checked ? "#111" : "#f0f4f8";
+    }
+
+  } else if(page==="terms"){
+    const el = document.createElement("div");
+    el.className="card";
+    el.innerHTML = `<h2>Terms of Service</h2><p>Insert your terms here...</p>`;
+    app.appendChild(el);
+
+  } else if(page==="privacy"){
+    const el = document.createElement("div");
+    el.className="card";
+    el.innerHTML = `<h2>Privacy Policy</h2><p>Insert your privacy policy here...</p>`;
+    app.appendChild(el);
   }
 }
 
