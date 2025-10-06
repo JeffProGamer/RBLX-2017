@@ -1,12 +1,22 @@
 // server.js
 const express = require("express");
 const fetch = require("node-fetch");
+const path = require("path");
 const cors = require("cors");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Enable CORS for API calls
 app.use(cors());
+
+// Serve static files (index.html, logo.png, signin.png, etc.)
+app.use(express.static(path.join(__dirname)));
+
+// Serve index.html for root and any page paths
+app.get(['/', '/home', '/signin', '/games'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // Fetch game info
 app.get("/api/games/:id", async (req, res) => {
@@ -46,4 +56,4 @@ app.get("/api/users/:id", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`RLBX proxy running on port ${PORT}`));
+app.listen(PORT, () => console.log(`RLBX server running on port ${PORT}`));
