@@ -40,8 +40,8 @@ async function fetchJson(url, opts={}) {
 
 // ---------- OAuth ----------
 
-const AUTH_AUTHORIZE = 'https://apis.roblox.com/oauth/authorize';
-const AUTH_TOKEN = 'https://apis.roblox.com/oauth/token';
+const AUTH_AUTHORIZE = 'https://authorize.roblox.com/oauth/authorize';
+const AUTH_TOKEN = 'https://authorize.roblox.com/oauth/token';
 
 // Start OAuth
 app.get('/auth', (req,res)=>{
@@ -92,7 +92,7 @@ app.get('/auth/logout', (req,res)=>{
 app.get('/api/me', async (req,res)=>{
   if (!req.session.roblox_token) return res.status(401).json({ error: 'Not signed in' });
   try {
-    const userResp = await fetch('https://apis.roblox.com/users/v1/users/authenticated', {
+    const userResp = await fetch('https://authorize.roblox.com/users/v1/users/authenticated', {
       headers:{ 'Authorization': `Bearer ${req.session.roblox_token}` }
     });
     if (!userResp.ok) throw new Error('Failed to fetch user info');
