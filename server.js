@@ -54,23 +54,23 @@ async function fetchJson(url, opts = {}) {
 const AUTH_AUTHORIZE = 'https://apis.roblox.com/oauth/authorize';
 const AUTH_TOKEN = 'https://apis.roblox.com/oauth/token';
 
-app.get('/auth/roblox', (req, res) => {
+app.get('/auth', (req, res) => {
   const state = Math.random().toString(36).slice(2);
   req.session.oauth_state = state;
-  const redirect_uri = `${BASE_URL}/auth/roblox/callback`;
+  const redirect_uri = `${BASE_URL}/auth/callback`;
   const scope = encodeURIComponent('openid profile');
   const url = `${AUTH_AUTHORIZE}?client_id=${ROBLOX_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(redirect_uri)}&state=${state}&scope=${scope}`;
   res.redirect(url);
 });
 
-app.get('/auth/roblox/callback', async (req, res) => {
+app.get('/auth/callback', async (req, res) => {
   const { code, state } = req.query;
   if (!code || state !== req.session.oauth_state) return res.status(400).send('Invalid OAuth state or code');
 
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     code,
-    redirect_uri: `${BASE_URL}/auth/roblox/callback`,
+    redirect_uri: `${BASE_URL}/auth/callback`,
     client_id: ROBLOX_CLIENT_ID,
     client_secret: ROBLOX_CLIENT_SECRET
   });
