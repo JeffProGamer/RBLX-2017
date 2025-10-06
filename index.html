@@ -7,7 +7,9 @@
 <style>
 body { margin:0; font-family:Arial, sans-serif; background:#f0f4f8; color:#111; }
 header { display:flex; align-items:center; background:#fff; padding:10px 20px; box-shadow:0 2px 6px rgba(0,0,0,0.1);}
-header img { height:40px; margin-right:10px; cursor:pointer;}
+header img#logo { height:40px; margin-right:10px; cursor:pointer;}
+header #userInfo { display:flex; align-items:center; margin-left:10px; }
+header #userInfo img { width:32px; height:32px; border-radius:50%; margin-right:6px; }
 nav { margin-left:auto; }
 nav button { margin-left:10px; padding:6px 12px; cursor:pointer; }
 .container { max-width:1100px; margin:20px auto; padding:0 10px; }
@@ -26,6 +28,7 @@ nav button { margin-left:10px; padding:6px 12px; cursor:pointer; }
 <header>
   <img src="logo.png" id="logo" alt="RLBX Logo"/>
   <strong>RLBX 2017 Edition</strong>
+  <div id="userInfo"></div>
   <nav>
     <button id="homeBtn">Home</button>
     <button id="gamesBtn">Games</button>
@@ -39,9 +42,11 @@ nav button { margin-left:10px; padding:6px 12px; cursor:pointer; }
 <main class="container" id="app"></main>
 
 <script>
-const PROXY = "https://rblx-2017.onrender.com"; // Your server API
+const PROXY = "https://rblx-2017.onrender.com"; // your server API
 const app = document.getElementById("app");
+const userInfo = document.getElementById("userInfo");
 
+// ----------------- Navigation -----------------
 document.getElementById("homeBtn").onclick = ()=>navigate("home");
 document.getElementById("gamesBtn").onclick = ()=>navigate("games");
 document.getElementById("signinBtn").onclick = ()=>navigate("signin");
@@ -52,6 +57,30 @@ document.getElementById("logo").onclick = ()=>navigate("home");
 
 function navigate(page){ renderPage(page); }
 
+// ----------------- Load logged-in user -----------------
+async function loadUser() {
+  try {
+    const res = await fetch(`${PROXY}/api/me`, { credentials: 'include' });
+    if (!res.ok) return; // not signed in
+    const user = await res.json();
+    userInfo.innerHTML = `
+      <img src="${user.headshot}" alt="${user.name}">
+      <span>${user.name}</span>
+      <button id="logoutBtn" style="margin-left:8px;padding:4px 8px;border:none;border-radius:6px;background:#f44336;color:white;cursor:pointer;">Logout</button>
+    `;
+    document.getElementById("signinBtn").style.display = "none"; // hide sign in button
+    document.getElementById("logoutBtn").onclick = async () => {
+      await fetch(`${PROXY}/auth/logout`, { credentials: 'include' });
+      userInfo.innerHTML = "";
+      document.getElementById("signinBtn").style.display = "inline-block";
+      navigate("home");
+    };
+  } catch(e) {
+    console.log("User not signed in");
+  }
+}
+
+// ----------------- Render pages -----------------
 function renderPage(page){
   app.innerHTML = "";
   if(page==="home"){
@@ -67,12 +96,8 @@ function renderPage(page){
       <div style="position:relative; max-width:400px; margin:15vh auto; background:rgba(255,255,255,0.95); padding:20px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.1);">
         <h1>Sign In</h1>
         <form class="signin" onsubmit="return false;">
-          <input class="input" placeholder="Username or email" name="user" autocomplete="username">
-          <input class="input" placeholder="Password" type="password" name="pass" autocomplete="current-password">
-          <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
-            <button class="btn" onclick="window.location.href=PROXY+'/auth/roblox'">Sign in with Roblox</button>
-            <button class="ghost" onclick="navigate('home')">Cancel</button>
-          </div>
+          <button class="btn" onclick="window.location.href=PROXY+'/auth/roblox'">Sign in with Roblox</button>
+          <button class="ghost" onclick="navigate('home')">Cancel</button>
           <div class="muted" style="margin-top:8px">OAuth handled via server.</div>
         </form>
       </div>
@@ -84,7 +109,7 @@ function renderPage(page){
     el.className="card";
     el.innerHTML = "<h2>Games</h2><div class='games-grid' id='gamesGrid'></div>";
     app.appendChild(el);
-    fetch(`${PROXY}/api/topgames?limit=50&page=1`).then(r=>r.json()).then(data=>{
+    fetch(`${PROXY}/api/topgames?limit=50&page=1`, { credentials: 'include' }).then(r=>r.json()).then(data=>{
       const grid = document.getElementById("gamesGrid");
       data.data.forEach(g=>{
         const div = document.createElement("div");
@@ -128,8 +153,9 @@ function renderPage(page){
   }
 }
 
-// Initial page load
+// ----------------- Initial load -----------------
 navigate("home");
+loadUser();
 </script>
 </body>
 </html>
