@@ -16,8 +16,8 @@ const cache = apicache.middleware;
 const PORT = process.env.PORT || 3000;
 
 // === CONFIG ===
-const ROBLOX_CLIENT_ID = process.env.ROBLOX_CLIENT_ID || '6438392192740765716';
-const ROBLOX_CLIENT_SECRET = process.env.ROBLOX_CLIENT_SECRET || 'RBX-xXCEXLXi-E6pOKm8E_OZJ_TPWxIFRUIkcWjQeOICeG8AEPIbhJzJWZqIrU3p320K';
+const ROBLOX_CLIENT_ID = process.env.ROBLOX_CLIENT_ID ;
+const ROBLOX_CLIENT_SECRET = process.env.ROBLOX_CLIENT_SECRET ;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
 // === MIDDLEWARE ===
